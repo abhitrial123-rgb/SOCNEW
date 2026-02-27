@@ -78,7 +78,7 @@ export default function App() {
 
   const page = useMemo(() => {
     if (tab === 'Dashboard') return <DashboardPage state={state} selectedIncident={selectedIncident} onSelectIncident={setSelectedIncident} onRefresh={refresh} />
-    if (tab === 'Incidents') return <IncidentsPage incidents={state.incidents} onSelect={setSelectedIncident} />
+    if (tab === 'Incidents') return <IncidentsPage incidents={state.incidents} onSelect={setSelectedIncident} onRefresh={refresh} />
     if (tab === 'Cases') return <CasesPage cases={state.cases} sla={state.sla} incidents={state.incidents} onRefresh={refresh} />
     if (tab === 'Intel') return <IntelPage incidents={state.incidents} />
     if (tab === 'MITRE') return <MITREPage incidents={state.incidents} selectedIncident={selectedIncident} />

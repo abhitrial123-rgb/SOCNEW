@@ -13,6 +13,7 @@ class MemoryStore:
         self.cases: Dict[str, List[Case]] = defaultdict(list)
         self.audit: Dict[str, Deque[AuditEvent]] = defaultdict(lambda: deque(maxlen=2000))
         self.agent_activity: Dict[str, Deque[AgentActivity]] = defaultdict(lambda: deque(maxlen=2000))
+        self.incident_logs: Dict[str, List[dict]] = defaultdict(list)
         self.sla_started: Dict[str, datetime] = {}
         self.scheduler_enabled = False
         self.scheduler_interval_seconds = 60

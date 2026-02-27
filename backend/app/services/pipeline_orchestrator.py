@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import uuid4
 
 from app.agents.agent_orchestrator import run_agents
@@ -36,6 +37,7 @@ def run_pipeline(tenant_id: str, parsed_log: dict) -> Incident:
         id=str(uuid4()),
         tenant_id=tenant_id,
         title=parsed_log["event"],
+        source_ip=parsed_log["source_ip"],
         severity=parsed_log["severity"],
         confidence=detection["confidence"],
         asset_criticality=parsed_log["asset_criticality"],
@@ -46,6 +48,7 @@ def run_pipeline(tenant_id: str, parsed_log: dict) -> Incident:
         classification=ai["classification"],
         references=ai["references"],
         recommended_actions=ai["recommended_actions"],
+        created_at=datetime.fromisoformat(parsed_log["event_time"]),
     )
     store.incidents[tenant_id].append(incident)
 
@@ -55,10 +58,29 @@ def run_pipeline(tenant_id: str, parsed_log: dict) -> Incident:
     playbook["intel"] = intel
     playbook["attack_criticality"] = attack_criticality
     playbook["recommended_actions"] = ai["recommended_actions"]
+    playbook["llm_contribution"] = {
+        "classification": ai["classification"],
+        "reasoning": ai["reasoning"],
+        "references": ai["references"],
+    }
     store_playbook(playbook)
 
     run_agents(tenant_id, incident.id)
     start(incident.id)
+
+    store.incident_logs[incident.id].append(
+        {
+            "timestamp": incident.created_at.isoformat(),
+            "stage": "pipeline",
+            "action": "incident_generated",
+            "details": {
+                "source_ip": incident.source_ip,
+                "classification": incident.classification,
+                "risk_level": incident.risk_level,
+                "mitre_ids": incident.mitre_ids,
+            },
+        }
+    )
 
     log_event(
         tenant_id,
@@ -70,6 +92,7 @@ def run_pipeline(tenant_id: str, parsed_log: dict) -> Incident:
             "risk_level": incident.risk_level,
             "mitre_ids": incident.mitre_ids,
             "recommended_actions": incident.recommended_actions,
+            "source_ip": incident.source_ip,
         },
     )
     return incident

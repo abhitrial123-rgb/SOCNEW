@@ -18,7 +18,7 @@ export default function DashboardPage({ state, selectedIncident, onSelectInciden
     <div className="grid">
       <MetricsRow data={metrics} />
       <RiskGauge incidents={incidents} />
-      <LiveIncidentFeed data={incidents} onSelect={onSelectIncident} />
+      <LiveIncidentFeed data={incidents} onSelect={onSelectIncident} onRefresh={onRefresh} />
       <DistributionChart incidents={incidents} />
       <PipelineFlow />
       <AIAnalysisPanel incident={selectedIncident} />

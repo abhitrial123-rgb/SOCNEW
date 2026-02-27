@@ -17,6 +17,7 @@ class Incident(BaseModel):
     id: str
     tenant_id: str
     title: str
+    source_ip: str = "0.0.0.0"
     severity: float
     confidence: float
     asset_criticality: float

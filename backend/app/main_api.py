@@ -172,12 +172,24 @@ def incident(incident_id: str, user=Depends(get_current_user)):
 @app.post("/api/mitigation/approve")
 def approve(action: MitigationAction, user=Depends(get_current_user)):
     log_event(user["tenant_id"], user["username"], "mitigation_approved", action.model_dump())
+    store.incident_logs[action.incident_id].append({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "stage": "mitigation",
+        "action": "approved",
+        "details": {"actor": user["username"]},
+    })
     return {"approved": True}
 
 
 @app.post("/api/mitigation/reject")
 def reject(action: MitigationAction, user=Depends(get_current_user)):
     log_event(user["tenant_id"], user["username"], "mitigation_rejected", action.model_dump())
+    store.incident_logs[action.incident_id].append({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "stage": "mitigation",
+        "action": "rejected",
+        "details": {"actor": user["username"]},
+    })
     return {"rejected": True}
 
 
@@ -188,6 +200,12 @@ def mitigation_execute(action: MitigationAction, user=Depends(get_current_user))
         raise HTTPException(status_code=404, detail="Playbook not found")
     result = execute(playbook)
     log_event(user["tenant_id"], user["username"], "mitigation_executed", result)
+    store.incident_logs[action.incident_id].append({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "stage": "mitigation",
+        "action": "executed",
+        "details": result,
+    })
     return result
 
 
@@ -238,6 +256,35 @@ def playbook(incident_id: str, user=Depends(get_current_user)):
     if not found:
         raise HTTPException(status_code=404, detail="Playbook not found")
     return found
+
+
+@app.get("/api/incidents/{incident_id}/log")
+def incident_log(incident_id: str, user=Depends(get_current_user)):
+    _ = user
+    return store.incident_logs.get(incident_id, [])
+
+
+@app.get("/api/incidents/{incident_id}/report")
+def incident_report(incident_id: str, user=Depends(get_current_user)):
+    incident = next((x for x in store.incidents[user["tenant_id"]] if x.id == incident_id), None)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    entries = store.incident_logs.get(incident_id, [])
+    report_lines = [
+        "Cybersecurity Incident Response Report",
+        f"Incident ID: {incident.id}",
+        f"Title: {incident.title}",
+        f"Source IP: {incident.source_ip}",
+        f"Generated At: {incident.created_at.isoformat()}",
+        f"Classification: {incident.classification}",
+        f"Risk Level: {incident.risk_level}",
+        f"MITRE Techniques: {', '.join(incident.mitre_ids) if incident.mitre_ids else 'N/A'}",
+        "",
+        "Actions Taken:",
+    ]
+    for idx, item in enumerate(entries, start=1):
+        report_lines.append(f"{idx}. [{item.get('timestamp')}] {item.get('stage')} - {item.get('action')} :: {item.get('details')}")
+    return {"incident_id": incident_id, "report": "\n".join(report_lines), "entries": entries}
 
 
 @app.websocket("/ws/live")

@@ -79,3 +79,14 @@ body { margin: 0; background: radial-gradient(circle at 10% 10%, #102245 0%, #04
   .grid > * { grid-column: span 12 !important; }
   .page { padding: 12px; }
 }
+
+.code-block {
+  background: #071122;
+  border: 1px solid #22466f;
+  border-radius: 8px;
+  padding: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #bfe6ff;
+  font-size: 12px;
+}
