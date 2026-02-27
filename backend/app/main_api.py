@@ -114,7 +114,13 @@ def switch_tenant(payload: TenantSwitchRequest, user=Depends(get_current_user)):
 async def ingest_manual(payload: IngestRequest, user=Depends(get_current_user)):
     parsed = ingest(payload.logs)
     incidents = [run_pipeline(user["tenant_id"], p) for p in parsed]
-    log_event(user["tenant_id"], user["username"], "manual_ingestion", {"count": len(incidents)})
+    classifications = [i.classification for i in incidents]
+    log_event(
+        user["tenant_id"],
+        user["username"],
+        "manual_ingestion",
+        {"count": len(incidents), "classification": classifications[0] if classifications else "N/A", "incident_id": incidents[0].id if incidents else "n/a"},
+    )
     await ws_manager.broadcast({"stage": "incident_feed", "incidents": [i.model_dump(mode="json") for i in incidents]})
     return incidents
 
@@ -223,6 +229,15 @@ def agents(user=Depends(get_current_user)):
 def siem_status(user=Depends(get_current_user)):
     _ = user
     return {"connectors": [splunk_status(), wazuh_status()]}
+
+
+@app.get("/api/playbooks/{incident_id}")
+def playbook(incident_id: str, user=Depends(get_current_user)):
+    _ = user
+    found = get_playbook(incident_id)
+    if not found:
+        raise HTTPException(status_code=404, detail="Playbook not found")
+    return found
 
 
 @app.websocket("/ws/live")

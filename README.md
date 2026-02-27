@@ -132,6 +132,7 @@ kubectl scale deploy/nexus-backend --replicas=4
 - `GET /api/audit`
 - `GET /api/agents/activity`
 - `GET /api/siem/status`
+- `GET /api/playbooks/{incident_id}`
 - `POST /api/auth/login`
 - `GET /api/auth/me`
 - `POST /api/tenant/switch`
@@ -142,3 +143,5 @@ kubectl scale deploy/nexus-backend --replicas=4
 
 - Risk scoring includes an **ATT&CK technique criticality factor** in addition to severity, detector confidence, and asset criticality.
 - Automatic ingestion can be enabled from the Ingestion page (manager role) or via `/api/ingest/scheduler/toggle`.
+
+- Streamlined pipeline stages shown in UI: Ingestion → Detection → AI Correlation → Risk Prioritization → Mitigation (no mandatory case-creation dependency).

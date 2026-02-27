@@ -27,6 +27,7 @@ class Incident(BaseModel):
     classification: str = "Suspicious Activity"
     reasoning: str = ""
     references: List[str] = Field(default_factory=list)
+    recommended_actions: List[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

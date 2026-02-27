@@ -7,6 +7,7 @@ from app.core.store import store
 from app.models.schemas import Incident
 from app.playbooks.playbook_generator import generate
 from app.playbooks.playbook_repository import store_playbook
+from app.services.audit_logger import log_event
 from app.services.detector import detect
 from app.services.intel_correlator import correlate
 from app.services.llm_engine import analyze
@@ -44,6 +45,7 @@ def run_pipeline(tenant_id: str, parsed_log: dict) -> Incident:
         reasoning=ai["reasoning"],
         classification=ai["classification"],
         references=ai["references"],
+        recommended_actions=ai["recommended_actions"],
     )
     store.incidents[tenant_id].append(incident)
 
@@ -52,8 +54,22 @@ def run_pipeline(tenant_id: str, parsed_log: dict) -> Incident:
     playbook["mitre"] = mitre
     playbook["intel"] = intel
     playbook["attack_criticality"] = attack_criticality
+    playbook["recommended_actions"] = ai["recommended_actions"]
     store_playbook(playbook)
 
-    run_agents(incident.id)
+    run_agents(tenant_id, incident.id)
     start(incident.id)
+
+    log_event(
+        tenant_id,
+        "pipeline",
+        "incident_generated",
+        {
+            "incident_id": incident.id,
+            "classification": incident.classification,
+            "risk_level": incident.risk_level,
+            "mitre_ids": incident.mitre_ids,
+            "recommended_actions": incident.recommended_actions,
+        },
+    )
     return incident

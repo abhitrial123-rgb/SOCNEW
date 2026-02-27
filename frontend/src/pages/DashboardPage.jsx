@@ -22,7 +22,7 @@ export default function DashboardPage({ state, selectedIncident, onSelectInciden
       <DistributionChart incidents={incidents} />
       <PipelineFlow />
       <AIAnalysisPanel incident={selectedIncident} />
-      <MitigationQueue incidents={incidents} onRefresh={onRefresh} />
+      <MitigationQueue incidents={incidents} onRefresh={onRefresh} onSelectIncident={onSelectIncident} />
       <MITREGrid incidents={incidents} />
       <ThreatIntelPanel incidents={incidents} />
       <CasePanel cases={cases} />
