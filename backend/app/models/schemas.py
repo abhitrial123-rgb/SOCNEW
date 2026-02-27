@@ -24,7 +24,9 @@ class Incident(BaseModel):
     risk_level: str
     status: str = "Open"
     mitre_ids: List[str] = Field(default_factory=list)
+    classification: str = "Suspicious Activity"
     reasoning: str = ""
+    references: List[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

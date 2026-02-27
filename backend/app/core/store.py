@@ -15,6 +15,8 @@ class MemoryStore:
         self.agent_activity: Dict[str, Deque[AgentActivity]] = defaultdict(lambda: deque(maxlen=2000))
         self.sla_started: Dict[str, datetime] = {}
         self.scheduler_enabled = False
+        self.scheduler_interval_seconds = 60
+        self.scheduler_last_run: datetime | None = None
 
 
 store = MemoryStore()

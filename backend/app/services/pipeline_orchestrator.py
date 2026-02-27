@@ -21,8 +21,16 @@ def run_pipeline(tenant_id: str, parsed_log: dict) -> Incident:
     detection = detect(parsed_log)
     ai = analyze(parsed_log["event"], detection["confidence"])
     mitre = [map_mitre(mid) for mid in ai["mitre_ids"]]
+    attack_criticality = max((m.get("attack_criticality", 1.0) for m in mitre), default=1.0)
+
     intel = correlate(enrich(parsed_log["source_ip"]))
-    risk_score, risk_level = score(parsed_log["severity"], detection["confidence"], parsed_log["asset_criticality"])
+    risk_score, risk_level = score(
+        parsed_log["severity"],
+        detection["confidence"],
+        parsed_log["asset_criticality"],
+        attack_criticality,
+    )
+
     incident = Incident(
         id=str(uuid4()),
         tenant_id=tenant_id,
@@ -34,13 +42,18 @@ def run_pipeline(tenant_id: str, parsed_log: dict) -> Incident:
         risk_level=risk_level,
         mitre_ids=ai["mitre_ids"],
         reasoning=ai["reasoning"],
+        classification=ai["classification"],
+        references=ai["references"],
     )
     store.incidents[tenant_id].append(incident)
+
     playbook = generate(incident.id, risk_level)
     playbook["mitigation"] = generate_mitigation(ai)
     playbook["mitre"] = mitre
     playbook["intel"] = intel
+    playbook["attack_criticality"] = attack_criticality
     store_playbook(playbook)
+
     run_agents(incident.id)
     start(incident.id)
     return incident
