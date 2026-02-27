@@ -27,6 +27,7 @@ class Incident(BaseModel):
     mitre_ids: List[str] = Field(default_factory=list)
     classification: str = "Suspicious Activity"
     reasoning: str = ""
+    expert_analysis: str = ""
     references: List[str] = Field(default_factory=list)
     recommended_actions: List[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -91,6 +92,7 @@ class DashboardMetrics(BaseModel):
 
 
 class AgentActivity(BaseModel):
+    incident_id: str
     agent: str
     decision: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)

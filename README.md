@@ -127,6 +127,8 @@ kubectl scale deploy/nexus-backend --replicas=4
 - `GET /api/incidents/{id}`
 - `GET /api/incidents/{id}/report`
 - `GET /api/incidents/{id}/log`
+- `GET /api/incidents/{id}/audit`
+- `GET /api/incidents/{id}/agents`
 - `GET /api/cases`
 - `POST /api/cases`
 - `PUT /api/cases/{id}`

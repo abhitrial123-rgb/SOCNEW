@@ -119,7 +119,11 @@ async def ingest_manual(payload: IngestRequest, user=Depends(get_current_user)):
         user["tenant_id"],
         user["username"],
         "manual_ingestion",
-        {"count": len(incidents), "classification": classifications[0] if classifications else "N/A", "incident_id": incidents[0].id if incidents else "n/a"},
+        {
+            "count": len(incidents),
+            "classification": classifications[0] if classifications else "N/A",
+            "incident_id": incidents[0].id if incidents else "n/a",
+        },
     )
     await ws_manager.broadcast({"stage": "incident_feed", "incidents": [i.model_dump(mode="json") for i in incidents]})
     return incidents
@@ -172,24 +176,28 @@ def incident(incident_id: str, user=Depends(get_current_user)):
 @app.post("/api/mitigation/approve")
 def approve(action: MitigationAction, user=Depends(get_current_user)):
     log_event(user["tenant_id"], user["username"], "mitigation_approved", action.model_dump())
-    store.incident_logs[action.incident_id].append({
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "stage": "mitigation",
-        "action": "approved",
-        "details": {"actor": user["username"]},
-    })
+    store.incident_logs[action.incident_id].append(
+        {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "stage": "mitigation",
+            "action": "approved",
+            "details": {"actor": user["username"], "incident_id": action.incident_id},
+        }
+    )
     return {"approved": True}
 
 
 @app.post("/api/mitigation/reject")
 def reject(action: MitigationAction, user=Depends(get_current_user)):
     log_event(user["tenant_id"], user["username"], "mitigation_rejected", action.model_dump())
-    store.incident_logs[action.incident_id].append({
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "stage": "mitigation",
-        "action": "rejected",
-        "details": {"actor": user["username"]},
-    })
+    store.incident_logs[action.incident_id].append(
+        {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "stage": "mitigation",
+            "action": "rejected",
+            "details": {"actor": user["username"], "incident_id": action.incident_id},
+        }
+    )
     return {"rejected": True}
 
 
@@ -199,13 +207,15 @@ def mitigation_execute(action: MitigationAction, user=Depends(get_current_user))
     if not playbook:
         raise HTTPException(status_code=404, detail="Playbook not found")
     result = execute(playbook)
-    log_event(user["tenant_id"], user["username"], "mitigation_executed", result)
-    store.incident_logs[action.incident_id].append({
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "stage": "mitigation",
-        "action": "executed",
-        "details": result,
-    })
+    log_event(user["tenant_id"], user["username"], "mitigation_executed", {"incident_id": action.incident_id, **result})
+    store.incident_logs[action.incident_id].append(
+        {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "stage": "mitigation",
+            "action": "executed",
+            "details": {"incident_id": action.incident_id, **result},
+        }
+    )
     return result
 
 
@@ -264,26 +274,45 @@ def incident_log(incident_id: str, user=Depends(get_current_user)):
     return store.incident_logs.get(incident_id, [])
 
 
+@app.get("/api/incidents/{incident_id}/audit")
+def incident_audit(incident_id: str, user=Depends(get_current_user)):
+    tenant_events = list(store.audit[user["tenant_id"]])
+    return [e for e in tenant_events if e.details.get("incident_id") == incident_id]
+
+
+@app.get("/api/incidents/{incident_id}/agents")
+def incident_agents(incident_id: str, user=Depends(get_current_user)):
+    tenant_agents = list(store.agent_activity[user["tenant_id"]])
+    return [a for a in tenant_agents if a.incident_id == incident_id]
+
+
 @app.get("/api/incidents/{incident_id}/report")
 def incident_report(incident_id: str, user=Depends(get_current_user)):
-    incident = next((x for x in store.incidents[user["tenant_id"]] if x.id == incident_id), None)
-    if not incident:
+    incident_obj = next((x for x in store.incidents[user["tenant_id"]] if x.id == incident_id), None)
+    if not incident_obj:
         raise HTTPException(status_code=404, detail="Incident not found")
+
     entries = store.incident_logs.get(incident_id, [])
+    agents_used = [a.agent for a in store.agent_activity[user["tenant_id"]] if a.incident_id == incident_id]
     report_lines = [
         "Cybersecurity Incident Response Report",
-        f"Incident ID: {incident.id}",
-        f"Title: {incident.title}",
-        f"Source IP: {incident.source_ip}",
-        f"Generated At: {incident.created_at.isoformat()}",
-        f"Classification: {incident.classification}",
-        f"Risk Level: {incident.risk_level}",
-        f"MITRE Techniques: {', '.join(incident.mitre_ids) if incident.mitre_ids else 'N/A'}",
+        f"Incident ID: {incident_obj.id}",
+        f"Title: {incident_obj.title}",
+        f"Source IP: {incident_obj.source_ip}",
+        f"Generated At: {incident_obj.created_at.isoformat()}",
+        f"Classification: {incident_obj.classification}",
+        f"Risk Level: {incident_obj.risk_level}",
+        f"MITRE Techniques: {', '.join(incident_obj.mitre_ids) if incident_obj.mitre_ids else 'N/A'}",
+        f"Agents Deployed: {', '.join(sorted(set(agents_used))) if agents_used else 'N/A'}",
+        "",
+        "Expert AI Breakdown:",
+        incident_obj.expert_analysis or incident_obj.reasoning,
         "",
         "Actions Taken:",
     ]
     for idx, item in enumerate(entries, start=1):
         report_lines.append(f"{idx}. [{item.get('timestamp')}] {item.get('stage')} - {item.get('action')} :: {item.get('details')}")
+
     return {"incident_id": incident_id, "report": "\n".join(report_lines), "entries": entries}
 
 

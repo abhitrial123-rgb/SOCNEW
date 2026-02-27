@@ -45,6 +45,7 @@ def run_pipeline(tenant_id: str, parsed_log: dict) -> Incident:
         risk_level=risk_level,
         mitre_ids=ai["mitre_ids"],
         reasoning=ai["reasoning"],
+        expert_analysis=ai["expert_analysis"],
         classification=ai["classification"],
         references=ai["references"],
         recommended_actions=ai["recommended_actions"],
@@ -61,12 +62,10 @@ def run_pipeline(tenant_id: str, parsed_log: dict) -> Incident:
     playbook["llm_contribution"] = {
         "classification": ai["classification"],
         "reasoning": ai["reasoning"],
+        "expert_analysis": ai["expert_analysis"],
         "references": ai["references"],
     }
     store_playbook(playbook)
-
-    run_agents(tenant_id, incident.id)
-    start(incident.id)
 
     store.incident_logs[incident.id].append(
         {
@@ -81,6 +80,9 @@ def run_pipeline(tenant_id: str, parsed_log: dict) -> Incident:
             },
         }
     )
+
+    run_agents(tenant_id, incident.id)
+    start(incident.id)
 
     log_event(
         tenant_id,

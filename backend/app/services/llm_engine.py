@@ -73,10 +73,17 @@ def analyze(event: str, confidence: float) -> Dict[str, object]:
         adjusted_confidence = confidence
         why = "No deterministic threat keyword matched; response is based on behavioral confidence."
 
+    expert_analysis = (
+        f"Expert SOC assessment: The event is classified as {classification} with confidence {round(adjusted_confidence*100,2)}%. "
+        f"Recommended strategy prioritizes containment, identity hardening, and evidence preservation. "
+        f"Key ATT&CK techniques: {', '.join(mitre_ids)}."
+    )
+
     return {
         "classification": classification,
         "confidence": round(adjusted_confidence * 100, 2),
         "reasoning": f"Event '{event}' classified as {classification}. {why}",
+        "expert_analysis": expert_analysis,
         "mitre_ids": mitre_ids,
         "references": refs,
         "recommended_actions": mitigation_steps,
