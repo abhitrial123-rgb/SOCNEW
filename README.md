@@ -147,3 +147,4 @@ kubectl scale deploy/nexus-backend --replicas=4
 - Automatic ingestion can be enabled from the Ingestion page (manager role) or via `/api/ingest/scheduler/toggle`.
 
 - Streamlined pipeline stages shown in UI: Ingestion → Detection → AI Correlation → Risk Prioritization → Mitigation (no mandatory case-creation dependency).
+- Incident drill-down now includes per-incident execution logs and a formal report endpoint for SOC handoff documentation.
